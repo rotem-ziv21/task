@@ -37,13 +37,25 @@
             margin-bottom: 15px;
             font-size: 1.5em;
         }
-        #task-input {
+        #task-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #task-input, #task-date, #task-priority, #task-client {
             width: calc(100% - 22px);
             padding: 12px;
-            margin-bottom: 15px;
             border: 2px solid #ccc;
             border-radius: 8px;
             font-size: 1em;
+        }
+        #task-description {
+            width: calc(100% - 22px);
+            padding: 12px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            font-size: 1em;
+            height: 80px;
         }
         #add-task-btn {
             width: 100%;
@@ -75,6 +87,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-direction: column;
+            cursor: grab;
+        }
+        .task-details {
+            width: 100%;
+            margin-bottom: 10px;
         }
         .delete-btn {
             background-color: #dc3545;
@@ -93,25 +111,35 @@
 </head>
 <body>
     <div class="task-board">
-        <div class="task-container" style="border-top: 6px solid #6c757d">
+        <div class="task-container" id="backlog" style="border-top: 6px solid #6c757d">
             <h2>Backlog (Open)</h2>
-            <input type="text" id="task-input" placeholder="Enter a new task">
-            <button id="add-task-btn">Add Task</button>
+            <form id="task-form">
+                <input type="text" id="task-input" placeholder="Enter task title" required>
+                <textarea id="task-description" placeholder="Enter task description"></textarea>
+                <input type="datetime-local" id="task-date" required>
+                <select id="task-priority">
+                    <option value="Low">Low Priority</option>
+                    <option value="Medium">Medium Priority</option>
+                    <option value="High">High Priority</option>
+                </select>
+                <input type="text" id="task-client" placeholder="Link to CRM client (optional)">
+                <button type="button" id="add-task-btn">Add Task</button>
+            </form>
             <ul class="task-list" id="task-list"></ul>
         </div>
-        <div class="task-container" style="border-top: 6px solid #f0ad4e">
+        <div class="task-container" id="selected" style="border-top: 6px solid #f0ad4e">
             <h2>Selected</h2>
             <ul class="task-list" id="in-progress-list"></ul>
         </div>
-        <div class="task-container" style="border-top: 6px solid #d9534f">
+        <div class="task-container" id="running" style="border-top: 6px solid #d9534f">
             <h2>Running</h2>
             <ul class="task-list" id="running-list"></ul>
         </div>
-        <div class="task-container" style="border-top: 6px solid #5bc0de">
+        <div class="task-container" id="evaluating" style="border-top: 6px solid #5bc0de">
             <h2>Evaluating</h2>
             <ul class="task-list" id="evaluating-list"></ul>
         </div>
-        <div class="task-container" style="border-top: 6px solid #5cb85c">
+        <div class="task-container" id="live" style="border-top: 6px solid #5cb85c">
             <h2>Live</h2>
             <ul class="task-list" id="live-list"></ul>
         </div>
@@ -123,26 +151,28 @@
                 const response = await fetch('https://api.example.com/tasks');
                 const tasks = await response.json();
                 tasks.forEach(task => {
-                    addTaskToUI(task.text, task.id);
+                    addTaskToUI(task);
                 });
             } catch (error) {
                 console.error('Error fetching tasks:', error);
             }
         }
 
-        async function addTask(taskText) {
+        async function addTask(task) {
             try {
                 const response = await fetch('https://api.example.com/tasks', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ text: taskText })
+                    body: JSON.stringify(task)
                 });
-                const task = await response.json();
-                addTaskToUI(task.text, task.id);
+                const savedTask = await response.json();
+                addTaskToUI(savedTask);
 
-                await createTaskInCRM(task.text);
+                if (task.client) {
+                    await createTaskInCRM(task);
+                }
             } catch (error) {
                 console.error('Error adding task:', error);
             }
@@ -159,13 +189,13 @@
             }
         }
 
-        async function createTaskInCRM(taskText) {
+        async function createTaskInCRM(task) {
             try {
                 let contactId;
                 try {
-                    contactId = await getContactId('John Doe');
+                    contactId = await getContactId(task.client);
                 } catch {
-                    contactId = await createContact('John', 'Doe', 'john.doe@example.com', '+1 888-999-1234');
+                    contactId = await createContact('Unknown', 'Client', 'unknown@example.com', '+1 000-000-0000');
                 }
                 await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}/tasks`, {
                     method: 'POST',
@@ -176,10 +206,11 @@
                         'Version': '2021-07-28'
                     },
                     body: JSON.stringify({
-                        title: taskText,
-                        body: 'loram ipsum',
-                        dueDate: new Date().toISOString(),
-                        completed: false
+                        title: task.title,
+                        body: task.description,
+                        dueDate: task.dueDate,
+                        completed: false,
+                        priority: task.priority
                     })
                 });
             } catch (error) {
@@ -236,24 +267,27 @@
             }
         }
 
-        function addTaskToUI(taskText, taskId) {
+        function addTaskToUI(task) {
             const taskList = document.getElementById('task-list');
 
             // Create new task item
             const li = document.createElement('li');
             li.className = 'task-item';
+            li.setAttribute('draggable', 'true');
+            li.addEventListener('dragstart', handleDragStart);
 
-            // Create task text span
-            const taskSpan = document.createElement('span');
-            taskSpan.textContent = taskText;
-            li.appendChild(taskSpan);
+            // Create task details div
+            const taskDetails = document.createElement('div');
+            taskDetails.className = 'task-details';
+            taskDetails.innerHTML = `<strong>${task.title}</strong><br>${task.description}<br>Due: ${task.dueDate}<br>Priority: ${task.priority}`;
+            li.appendChild(taskDetails);
 
             // Create delete button
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-btn';
             deleteBtn.textContent = 'Delete';
             deleteBtn.addEventListener('click', function() {
-                deleteTask(taskId, li);
+                deleteTask(task.id, li);
             });
 
             li.appendChild(deleteBtn);
@@ -262,13 +296,54 @@
 
         document.getElementById('add-task-btn').addEventListener('click', function() {
             const taskInput = document.getElementById('task-input');
-            const taskText = taskInput.value.trim();
+            const taskDescription = document.getElementById('task-description');
+            const taskDate = document.getElementById('task-date');
+            const taskPriority = document.getElementById('task-priority');
+            const taskClient = document.getElementById('task-client');
 
-            if (taskText !== '') {
-                addTask(taskText);
+            const task = {
+                title: taskInput.value.trim(),
+                description: taskDescription.value.trim(),
+                dueDate: taskDate.value,
+                priority: taskPriority.value,
+                client: taskClient.value.trim()
+            };
+
+            if (task.title !== '' && task.dueDate !== '') {
+                addTaskToUI(task); // Adding the task to UI directly before sending to server
+                addTask(task);
                 taskInput.value = '';
+                taskDescription.value = '';
+                taskDate.value = '';
+                taskPriority.value = 'Low';
+                taskClient.value = '';
             }
         });
+
+        function handleDragStart(event) {
+            event.dataTransfer.setData('text/plain', event.target.id);
+            event.dataTransfer.effectAllowed = 'move';
+        }
+
+        const containers = document.querySelectorAll('.task-container');
+        containers.forEach(container => {
+            const taskList = container.querySelector('.task-list');
+            taskList.addEventListener('dragover', handleDragOver);
+            taskList.addEventListener('drop', handleDrop);
+        });
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            const taskId = event.dataTransfer.getData('text/plain');
+            const taskElement = document.getElementById(taskId);
+            const taskList = event.target.closest('.task-list');
+            taskList.appendChild(taskElement);
+        }
 
         // Fetch tasks when page loads
         fetchTasks();
