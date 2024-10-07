@@ -40,25 +40,25 @@
         }
         #task-form {
             display: flex;
-            flex-direction: row;
+            flex-direction: column;
             gap: 10px;
             margin-bottom: 15px;
         }
-        #task-input, #task-date {
-            width: 150px;
-            padding: 5px;
+        #task-input, #task-date, #task-priority, #task-description {
+            width: 100%;
+            padding: 10px;
             border: 1px solid #ddd;
             border-radius: 8px;
             font-size: 0.9em;
         }
         #add-task-btn {
-            padding: 8px;
+            padding: 10px;
             background-color: #00aaff;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 0.9em;
+            font-size: 1em;
             transition: background-color 0.3s ease;
         }
         #add-task-btn:hover {
@@ -147,7 +147,13 @@
             <h2 contenteditable="true">Backlog (Open)</h2>
             <form id="task-form">
                 <input type="text" id="task-input" placeholder="Enter task title" required>
+                <textarea id="task-description" placeholder="Enter task description"></textarea>
                 <input type="datetime-local" id="task-date" required>
+                <select id="task-priority">
+                    <option value="Low">Low Priority</option>
+                    <option value="Medium">Medium Priority</option>
+                    <option value="High">High Priority</option>
+                </select>
                 <button type="button" id="add-task-btn">Add Task</button>
             </form>
             <ul class="task-list" id="task-list"></ul>
@@ -229,8 +235,10 @@
             taskDetails.className = 'task-details';
             taskDetails.innerHTML = `
                 <div class="task-title">${task.title}</div>
+                <div>${task.description}</div>
                 <div class="task-metadata">
                     <span>Due: ${task.dueDate}</span>
+                    <span class="priority ${task.priority}">${task.priority}</span>
                 </div>`;
             li.appendChild(taskDetails);
 
@@ -248,18 +256,24 @@
 
         document.getElementById('add-task-btn').addEventListener('click', function() {
             const taskInput = document.getElementById('task-input');
+            const taskDescription = document.getElementById('task-description');
             const taskDate = document.getElementById('task-date');
+            const taskPriority = document.getElementById('task-priority');
 
             const task = {
                 title: taskInput.value.trim(),
-                dueDate: taskDate.value
+                description: taskDescription.value.trim(),
+                dueDate: taskDate.value,
+                priority: taskPriority.value
             };
 
             if (task.title !== '' && task.dueDate !== '') {
                 addTaskToUI(task); // Adding the task to UI directly before sending to server
                 addTask(task);
                 taskInput.value = '';
+                taskDescription.value = '';
                 taskDate.value = '';
+                taskPriority.value = 'Low';
             }
         });
 
