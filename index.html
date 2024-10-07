@@ -9,8 +9,42 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f5f7;
             display: flex;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: flex-start;
+            padding: 20px;
+        }
+        .sidebar {
+            background-color: #343a40;
+            color: white;
+            width: 250px;
+            height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+        .sidebar h2 {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar ul li {
+            padding: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .sidebar ul li:hover {
+            background-color: #495057;
+        }
+        .task-board-wrapper {
+            margin-left: 270px;
+            width: calc(100% - 270px);
             padding: 20px;
         }
         .task-board {
@@ -18,7 +52,7 @@
             display: flex;
             gap: 20px;
             overflow-x: auto;
-            width: 90%;
+            width: 100%;
             max-width: 1400px;
         }
         .task-container {
@@ -37,6 +71,7 @@
             font-size: 1.5em;
             font-weight: bold;
             color: #333;
+            cursor: pointer;
         }
         #task-form {
             display: flex;
@@ -142,40 +177,51 @@
     </style>
 </head>
 <body>
-    <div class="task-board" id="task-board">
-        <div class="task-container" id="backlog" style="border-top: 6px solid #6c757d">
-            <h2 contenteditable="true">Backlog (Open)</h2>
-            <form id="task-form">
-                <input type="text" id="task-input" placeholder="Enter task title" required>
-                <textarea id="task-description" placeholder="Enter task description"></textarea>
-                <input type="datetime-local" id="task-date" required>
-                <select id="task-priority">
-                    <option value="Low">Low Priority</option>
-                    <option value="Medium">Medium Priority</option>
-                    <option value="High">High Priority</option>
-                </select>
-                <button type="button" id="add-task-btn">Add Task</button>
-            </form>
-            <ul class="task-list" id="task-list"></ul>
-        </div>
-        <div class="task-container" id="selected" style="border-top: 6px solid #f0ad4e">
-            <h2 contenteditable="true">Selected</h2>
-            <ul class="task-list" id="in-progress-list"></ul>
-        </div>
-        <div class="task-container" id="running" style="border-top: 6px solid #d9534f">
-            <h2 contenteditable="true">Running</h2>
-            <ul class="task-list" id="running-list"></ul>
-        </div>
-        <div class="task-container" id="evaluating" style="border-top: 6px solid #5bc0de">
-            <h2 contenteditable="true">Evaluating</h2>
-            <ul class="task-list" id="evaluating-list"></ul>
-        </div>
-        <div class="task-container" id="live" style="border-top: 6px solid #5cb85c">
-            <h2 contenteditable="true">Live</h2>
-            <ul class="task-list" id="live-list"></ul>
-        </div>
+    <div class="sidebar">
+        <h2>Task Manager</h2>
+        <ul>
+            <li>Dashboard</li>
+            <li>Projects</li>
+            <li>Settings</li>
+            <li>Help</li>
+        </ul>
     </div>
-    <button class="add-column-btn" id="add-column-btn">Add Column</button>
+    <div class="task-board-wrapper">
+        <div class="task-board" id="task-board">
+            <div class="task-container" id="backlog" style="border-top: 6px solid #6c757d">
+                <h2 contenteditable="true">Backlog (Open)</h2>
+                <form id="task-form">
+                    <input type="text" id="task-input" placeholder="Enter task title" required>
+                    <textarea id="task-description" placeholder="Enter task description"></textarea>
+                    <input type="datetime-local" id="task-date" required>
+                    <select id="task-priority">
+                        <option value="Low">Low Priority</option>
+                        <option value="Medium">Medium Priority</option>
+                        <option value="High">High Priority</option>
+                    </select>
+                    <button type="button" id="add-task-btn">Add Task</button>
+                </form>
+                <ul class="task-list" id="task-list"></ul>
+            </div>
+            <div class="task-container" id="selected" style="border-top: 6px solid #f0ad4e">
+                <h2 contenteditable="true">Selected</h2>
+                <ul class="task-list" id="in-progress-list"></ul>
+            </div>
+            <div class="task-container" id="running" style="border-top: 6px solid #d9534f">
+                <h2 contenteditable="true">Running</h2>
+                <ul class="task-list" id="running-list"></ul>
+            </div>
+            <div class="task-container" id="evaluating" style="border-top: 6px solid #5bc0de">
+                <h2 contenteditable="true">Evaluating</h2>
+                <ul class="task-list" id="evaluating-list"></ul>
+            </div>
+            <div class="task-container" id="live" style="border-top: 6px solid #5cb85c">
+                <h2 contenteditable="true">Live</h2>
+                <ul class="task-list" id="live-list"></ul>
+            </div>
+        </div>
+        <button class="add-column-btn" id="add-column-btn">Add Column</button>
+    </div>
 
     <script>
         async function fetchTasks() {
@@ -222,15 +268,12 @@
         }
 
         function addTaskToUI(task) {
-            const taskList = document.getElementById('task-list');
-
-            // Create new task item
             const li = document.createElement('li');
             li.className = 'task-item';
             li.setAttribute('draggable', 'true');
+            li.id = `task-${task.id}`;
             li.addEventListener('dragstart', handleDragStart);
 
-            // Create task details div
             const taskDetails = document.createElement('div');
             taskDetails.className = 'task-details';
             taskDetails.innerHTML = `
@@ -242,7 +285,6 @@
                 </div>`;
             li.appendChild(taskDetails);
 
-            // Create delete button
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'delete-btn';
             deleteBtn.textContent = 'Delete';
@@ -251,7 +293,7 @@
             });
 
             li.appendChild(deleteBtn);
-            taskList.appendChild(li);
+            document.getElementById('task-list').appendChild(li);
         }
 
         document.getElementById('add-task-btn').addEventListener('click', function() {
@@ -261,6 +303,7 @@
             const taskPriority = document.getElementById('task-priority');
 
             const task = {
+                id: Date.now(),
                 title: taskInput.value.trim(),
                 description: taskDescription.value.trim(),
                 dueDate: taskDate.value,
@@ -268,7 +311,7 @@
             };
 
             if (task.title !== '' && task.dueDate !== '') {
-                addTaskToUI(task); // Adding the task to UI directly before sending to server
+                addTaskToUI(task);
                 addTask(task);
                 taskInput.value = '';
                 taskDescription.value = '';
@@ -293,19 +336,15 @@
             newColumn.appendChild(taskList);
 
             taskBoard.appendChild(newColumn);
+
+            taskList.addEventListener('dragover', handleDragOver);
+            taskList.addEventListener('drop', handleDrop);
         });
 
         function handleDragStart(event) {
             event.dataTransfer.setData('text/plain', event.target.id);
             event.dataTransfer.effectAllowed = 'move';
         }
-
-        const containers = document.querySelectorAll('.task-container');
-        containers.forEach(container => {
-            const taskList = container.querySelector('.task-list');
-            taskList.addEventListener('dragover', handleDragOver);
-            taskList.addEventListener('drop', handleDrop);
-        });
 
         function handleDragOver(event) {
             event.preventDefault();
@@ -317,10 +356,11 @@
             const taskId = event.dataTransfer.getData('text/plain');
             const taskElement = document.getElementById(taskId);
             const taskList = event.target.closest('.task-list');
-            taskList.appendChild(taskElement);
+            if (taskList) {
+                taskList.appendChild(taskElement);
+            }
         }
 
-        // Fetch tasks when page loads
         fetchTasks();
     </script>
 </body>
