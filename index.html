@@ -40,33 +40,25 @@
         }
         #task-form {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             gap: 10px;
+            margin-bottom: 15px;
         }
-        #task-input, #task-date, #task-priority, #task-client {
-            width: 100%;
-            padding: 10px;
+        #task-input, #task-date {
+            width: 150px;
+            padding: 5px;
             border: 1px solid #ddd;
             border-radius: 8px;
-            font-size: 1em;
-        }
-        #task-description {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1em;
-            height: 80px;
+            font-size: 0.9em;
         }
         #add-task-btn {
-            width: 100%;
-            padding: 12px;
+            padding: 8px;
             background-color: #00aaff;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 1em;
+            font-size: 0.9em;
             transition: background-color 0.3s ease;
         }
         #add-task-btn:hover {
@@ -137,43 +129,47 @@
         .delete-btn:hover {
             background-color: #c82333;
         }
+        .add-column-btn {
+            padding: 10px;
+            margin: 10px;
+            background-color: #00aaff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+        }
     </style>
 </head>
 <body>
-    <div class="task-board">
+    <div class="task-board" id="task-board">
         <div class="task-container" id="backlog" style="border-top: 6px solid #6c757d">
-            <h2>Backlog (Open)</h2>
+            <h2 contenteditable="true">Backlog (Open)</h2>
             <form id="task-form">
                 <input type="text" id="task-input" placeholder="Enter task title" required>
-                <textarea id="task-description" placeholder="Enter task description"></textarea>
                 <input type="datetime-local" id="task-date" required>
-                <select id="task-priority">
-                    <option value="Low">Low Priority</option>
-                    <option value="Medium">Medium Priority</option>
-                    <option value="High">High Priority</option>
-                </select>
-                <input type="text" id="task-client" placeholder="Link to CRM client (optional)">
                 <button type="button" id="add-task-btn">Add Task</button>
             </form>
             <ul class="task-list" id="task-list"></ul>
         </div>
         <div class="task-container" id="selected" style="border-top: 6px solid #f0ad4e">
-            <h2>Selected</h2>
+            <h2 contenteditable="true">Selected</h2>
             <ul class="task-list" id="in-progress-list"></ul>
         </div>
         <div class="task-container" id="running" style="border-top: 6px solid #d9534f">
-            <h2>Running</h2>
+            <h2 contenteditable="true">Running</h2>
             <ul class="task-list" id="running-list"></ul>
         </div>
         <div class="task-container" id="evaluating" style="border-top: 6px solid #5bc0de">
-            <h2>Evaluating</h2>
+            <h2 contenteditable="true">Evaluating</h2>
             <ul class="task-list" id="evaluating-list"></ul>
         </div>
         <div class="task-container" id="live" style="border-top: 6px solid #5cb85c">
-            <h2>Live</h2>
+            <h2 contenteditable="true">Live</h2>
             <ul class="task-list" id="live-list"></ul>
         </div>
     </div>
+    <button class="add-column-btn" id="add-column-btn">Add Column</button>
 
     <script>
         async function fetchTasks() {
@@ -219,84 +215,6 @@
             }
         }
 
-        async function createTaskInCRM(task) {
-            try {
-                let contactId;
-                try {
-                    contactId = await getContactId(task.client);
-                } catch {
-                    contactId = await createContact('Unknown', 'Client', 'unknown@example.com', '+1 000-000-0000');
-                }
-                await fetch(`https://services.leadconnectorhq.com/contacts/${contactId}/tasks`, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': 'Bearer 123',
-                        'Content-Type': 'application/json',
-                        'Version': '2021-07-28'
-                    },
-                    body: JSON.stringify({
-                        title: task.title,
-                        body: task.description,
-                        dueDate: task.dueDate,
-                        completed: false,
-                        priority: task.priority
-                    })
-                });
-            } catch (error) {
-                console.error('Error creating task in CRM:', error);
-            }
-        }
-
-        async function getContactId(contactQuery) {
-            try {
-                const response = await fetch(`https://services.leadconnectorhq.com/contacts/?locationId=ve9EPM428h8vShlRW1KT&query=${contactQuery}`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': 'Bearer 123',
-                        'Version': '2021-07-28'
-                    }
-                });
-                const data = await response.json();
-                if (data && data.length > 0) {
-                    return data[0].id;
-                } else {
-                    throw new Error('Contact not found');
-                }
-            } catch (error) {
-                console.error('Error fetching contact ID:', error);
-                throw error;
-            }
-        }
-
-        async function createContact(firstName, lastName, email, phone) {
-            try {
-                const response = await fetch('https://services.leadconnectorhq.com/contacts/', {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': 'Bearer 123',
-                        'Content-Type': 'application/json',
-                        'Version': '2021-07-28'
-                    },
-                    body: JSON.stringify({
-                        firstName: firstName,
-                        lastName: lastName,
-                        name: `${firstName} ${lastName}`,
-                        email: email,
-                        locationId: 've9EPM428h8vShlRW1KT',
-                        phone: phone
-                    })
-                });
-                const data = await response.json();
-                return data.id;
-            } catch (error) {
-                console.error('Error creating contact:', error);
-                throw error;
-            }
-        }
-
         function addTaskToUI(task) {
             const taskList = document.getElementById('task-list');
 
@@ -311,10 +229,8 @@
             taskDetails.className = 'task-details';
             taskDetails.innerHTML = `
                 <div class="task-title">${task.title}</div>
-                <div>${task.description}</div>
                 <div class="task-metadata">
                     <span>Due: ${task.dueDate}</span>
-                    <span class="priority ${task.priority}">${task.priority}</span>
                 </div>`;
             li.appendChild(taskDetails);
 
@@ -332,28 +248,37 @@
 
         document.getElementById('add-task-btn').addEventListener('click', function() {
             const taskInput = document.getElementById('task-input');
-            const taskDescription = document.getElementById('task-description');
             const taskDate = document.getElementById('task-date');
-            const taskPriority = document.getElementById('task-priority');
-            const taskClient = document.getElementById('task-client');
 
             const task = {
                 title: taskInput.value.trim(),
-                description: taskDescription.value.trim(),
-                dueDate: taskDate.value,
-                priority: taskPriority.value,
-                client: taskClient.value.trim()
+                dueDate: taskDate.value
             };
 
             if (task.title !== '' && task.dueDate !== '') {
                 addTaskToUI(task); // Adding the task to UI directly before sending to server
                 addTask(task);
                 taskInput.value = '';
-                taskDescription.value = '';
                 taskDate.value = '';
-                taskPriority.value = 'Low';
-                taskClient.value = '';
             }
+        });
+
+        document.getElementById('add-column-btn').addEventListener('click', function() {
+            const taskBoard = document.getElementById('task-board');
+            const newColumn = document.createElement('div');
+            newColumn.className = 'task-container';
+            newColumn.style.borderTop = '6px solid #007bff';
+
+            const columnTitle = document.createElement('h2');
+            columnTitle.contentEditable = 'true';
+            columnTitle.textContent = 'New Column';
+            newColumn.appendChild(columnTitle);
+
+            const taskList = document.createElement('ul');
+            taskList.className = 'task-list';
+            newColumn.appendChild(taskList);
+
+            taskBoard.appendChild(newColumn);
         });
 
         function handleDragStart(event) {
